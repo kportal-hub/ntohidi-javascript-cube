@@ -1,0 +1,33 @@
+name: On Merge main#easy#1.topic1/1.lesson1
+on:
+  pull_request:
+    branches: main#easy#1.topic1/1.lesson1
+    types: closed
+
+jobs:
+  mergeAndNotify:
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v1
+      - name: Use Node.js 12.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12.x"    
+      - name: Cache node modules
+        uses: actions/cache@v1
+        with:
+          path: node_modules
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-${{ env.cache-name }}-
+            ${{ runner.OS }}-build-
+            ${{ runner.OS }}-
+      
+      - name: npm install
+        run: npm install
+      
+      - name: Notify KidoCode and Student
+        run: |
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+          git config --global user.name "${{ github.actor }}"
+          node .github/workflows/onMergeLesson.js ${{ github.repository }} ${{ secrets.GITHUB_TOKEN }} ${{ github.event.pull_request.merged }} main#easy#1.topic1/1.lesson1
