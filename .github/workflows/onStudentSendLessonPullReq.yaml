@@ -1,0 +1,56 @@
+name: Test main#easy#1.topic1/1.lesson1 and Pull Next one
+on:
+  push:
+    branches: main#easy#1.topic1/1.lesson1
+    paths: 'auth-request'
+
+jobs:
+  testAndBringNextLesson:
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v1
+      - name: Use Node.js 12.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12.x"    
+      - name: Cache node modules
+        uses: actions/cache@v1
+        with:
+          path: node_modules
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-${{ env.cache-name }}-
+            ${{ runner.OS }}-build-
+            ${{ runner.OS }}-
+      
+      - name: npm install
+        run: npm install
+      
+      - name: Fetch student finished lesson, main#easy#1.topic1/1.lesson1
+        run: |
+          node .github/workflows/fetchStudentLesson.js ${{ github.repository }} main#easy#1.topic1/1.lesson1
+          git checkout main#easy#1.topic1/1.lesson1-test
+      
+      - name: Test main#easy#1.topic1/1.lesson1
+        run : npm test
+      
+      - name: Set GitHub user config and save test results
+        run: |
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+          git config --global user.name "${{ github.actor }}"
+          node .github/workflows/pushTestResult.js ${{ github.repository }} ${{ secrets.GITHUB_TOKEN }} main#easy#1.topic1/1.lesson1 ${{ github.actor }}
+      
+      - name: Failure
+        if: failure()
+        run: echo "failure"
+      
+      - name: Success - Pull next lesson
+        if: success()
+        run: |
+          echo "success"
+          git checkout master
+          git pull origin master
+          git checkout main#easy#1.topic1/1.lesson1 --
+          git branch -D main#easy#1.topic1/1.lesson1-test
+          git pull origin main#easy#1.topic1/1.lesson1
+          node .github/workflows/onStudentSendLessonPullReq.js ${{ github.repository }} ${{ secrets.GITHUB_TOKEN }} main#easy#1.topic1/1.lesson1  ${{ github.actor }}
